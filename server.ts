@@ -1,36 +1,46 @@
-// server.ts
+// Import required modules from deno_std
+import { serve } from "https://deno.land/std/http/server.ts";
+import { serveStatic } from "https://deno.land/std/http/file_server.ts";
 
-import { serveStatic } from "https://deno.land/x/serve_static@2.1.1/mod.ts";
-
+// Create a KV storage for storing short URLs
 const kv = await Deno.openKv();
 
 // Serve static files (e.g., index.html) from the "public" directory
 const staticServer = serveStatic("public");
 
-Deno.serve(async (request: Request) => {
-  const url = new URL(request.url);
+// Create a server instance
+const port = Deno.env.get("PORT") ?? "8000"; // Default to port 8000 if $PORT is not set
+const server = serve({ port: parseInt(port) });
+console.log(`Server running on port ${port}`);
 
-  // Check if the request is for a static file
-  if (url.pathname.startsWith("/public")) {
-    return staticServer(request);
-  }
-
-  if (request.method == "POST") {
-    // Handle POST request to create short links
-    const body = await request.text();
-    const { slug, url } = JSON.parse(body);
-    const result = await kv.set(["links", slug], url);
-    return new Response(JSON.stringify(result));
-  } else {
-    // Handle GET request to redirect short links
-    const slug = url.pathname.split("/").pop() || "";
-    const storedUrl = (await kv.get(["links", slug]))?.value as string;
-    if (storedUrl) {
-      return Response.redirect(storedUrl, 301);
+// Handle incoming requests
+for await (const request of server) {
+  try {
+    // Check if the request is for a static file
+    if (request.url.startsWith("/public")) {
+      await staticServer(request);
     } else {
-      const message = !slug ? "Please provide a slug." : `Slug "${slug}" not found`;
-      return new Response(message, { status: 404 });
+      // Handle URL shortening requests
+      if (request.method === "POST") {
+        const body = await request.text();
+        const { slug, url } = JSON.parse(body);
+        const result = await kv.set(["links", slug], url);
+        request.respond({ body: JSON.stringify(result) });
+      } else {
+        // Redirect short links
+        const slug = request.url.substr(1); // Remove leading slash
+        const storedUrl = (await kv.get(["links", slug]))?.value as string;
+        if (storedUrl) {
+          request.respond({ status: 301, headers: new Headers({ "Location": storedUrl }) });
+        } else {
+          request.respond({ status: 404, body: `Slug "${slug}" not found` });
+        }
+      }
     }
+  } catch (error) {
+    console.error("Error:", error);
+    request.respond({ status: 500, body: "Internal Server Error" });
   }
-});
+}
+
 
