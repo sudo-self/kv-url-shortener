@@ -13,11 +13,8 @@ const staticServer = async (req: any) => {
 
 // Create a server instance
 const port = Deno.env.get("PORT") ?? "8000"; // Default to port 8000 if $PORT is not set
-const server = serve({ port: parseInt(port) });
 console.log(`Server running on port ${port}`);
-
-// Handle incoming requests
-for await (const request of server) {
+for await (const request of serve({ port: parseInt(port) })) {
   try {
     // Check if the request is for a static file
     if (request.url.startsWith("/public")) {
@@ -45,5 +42,6 @@ for await (const request of server) {
     request.respond({ status: 500, body: "Internal Server Error" });
   }
 }
+
 
 
