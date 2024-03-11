@@ -1,12 +1,15 @@
 // Import required modules from deno_std
 import { serve } from "https://deno.land/std/http/server.ts";
-import { serveStatic } from "https://deno.land/std/http/file_server.ts";
+import { serveFile } from "https://deno.land/std/http/file_server.ts";
 
 // Create a KV storage for storing short URLs
 const kv = await Deno.openKv();
 
 // Serve static files (e.g., index.html) from the "public" directory
-const staticServer = serveStatic("public");
+const staticServer = async (req: any) => {
+  const path = req.url.replace(/^\/public\//, '');
+  await serveFile(req, path);
+};
 
 // Create a server instance
 const port = Deno.env.get("PORT") ?? "8000"; // Default to port 8000 if $PORT is not set
@@ -42,5 +45,4 @@ for await (const request of server) {
     request.respond({ status: 500, body: "Internal Server Error" });
   }
 }
-
 
