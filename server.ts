@@ -13,8 +13,12 @@ const staticServer = async (req: any) => {
 
 // Create a server instance
 const port = Deno.env.get("PORT") ?? "8000"; // Default to port 8000 if $PORT is not set
+const server = serve({ port: parseInt(port) });
 console.log(`Server running on port ${port}`);
-for await (const request of serve({ port: parseInt(port) })) {
+
+// Handle incoming requests
+for await (const requestEvent of server) {
+  const request = requestEvent.request;
   try {
     // Check if the request is for a static file
     if (request.url.startsWith("/public")) {
@@ -25,23 +29,24 @@ for await (const request of serve({ port: parseInt(port) })) {
         const body = await request.text();
         const { slug, url } = JSON.parse(body);
         const result = await kv.set(["links", slug], url);
-        request.respond({ body: JSON.stringify(result) });
+        requestEvent.respondWith(new Response(JSON.stringify(result)));
       } else {
         // Redirect short links
         const slug = request.url.substr(1); // Remove leading slash
         const storedUrl = (await kv.get(["links", slug]))?.value as string;
         if (storedUrl) {
-          request.respond({ status: 301, headers: new Headers({ "Location": storedUrl }) });
+          requestEvent.respondWith(Response.redirect(storedUrl, 301));
         } else {
-          request.respond({ status: 404, body: `Slug "${slug}" not found` });
+          requestEvent.respondWith(new Response(`Slug "${slug}" not found`, { status: 404 }));
         }
       }
     }
   } catch (error) {
     console.error("Error:", error);
-    request.respond({ status: 500, body: "Internal Server Error" });
+    requestEvent.respondWith(new Response("Internal Server Error", { status: 500 }));
   }
 }
+
 
 
 
