@@ -1,6 +1,36 @@
 # [kv-url-Shortener](https://kv-url-shortener.deno.dev/)
-![Screenshot 2024-03-10 at 10 01 41 PM](https://github.com/sudo-self/kv-deno-url/assets/119916323/5dcec805-b03e-4c53-8015-4724b702cd0e)
 
+server.ts
+```
+
+// server.ts
+
+// deno run -A --unstable server.ts
+
+// localhost:8000
+
+const kv = await Deno.openKv();
+
+Deno.serve(async (request: Request) => {
+  // Create short links
+  if (request.method == "POST") {
+    const body = await request.text();
+    const { slug, url } = JSON.parse(body);
+    const result = await kv.set(["links", slug], url);
+    return new Response(JSON.stringify(result));
+  }
+
+  // Redirect short links
+  const slug = request.url.split("/").pop() || "";
+  const url = (await kv.get(["links", slug])).value as string;
+  if (url) {
+    return Response.redirect(url, 301);
+  } else {
+    const m = !slug ? "Please provide a slug." : `Slug "${slug}" not found`;
+    return new Response(m, { status: 404 });
+  }
+});
+```
 
 Request
 ```
