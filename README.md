@@ -50,4 +50,13 @@ Verify
 curl -v https://kv-url-shortener.deno.dev/url
 ```
 
+the server<br>
+https://kv-url-shortener.deno.dev 
+```
+Please Provide a Slug
+```
+
+
+
+
 
