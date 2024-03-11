@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>URL Shortener</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+  }
+  h1 {
+    margin-bottom: 20px;
+  }
+  form {
+    margin-bottom: 20px;
+  }
+  input[type="text"], button {
+    padding: 8px;
+    font-size: 16px;
+    margin-right: 10px;
+  }
+  #shortenedUrl {
+    margin-top: 20px;
+  }
+</style>
+</head>
+<body>
+  <h1>URL Shortener</h1>
+  <form id="urlShortenerForm">
+    <label for="url">URL:</label>
+    <input type="text" id="url" name="url" required>
+    <label for="slug">Custom Slug (optional):</label>
+    <input type="text" id="slug" name="slug">
+    <button type="submit">Shorten URL</button>
+  </form>
+  <div id="shortenedUrl"></div>
+
+  <script>
+    document.getElementById('urlShortenerForm').addEventListener('submit', function(event) {
+      event.preventDefault();
+
+      const url = document.getElementById('url').value.trim();
+      const slug = document.getElementById('slug').value.trim();
+
+      const requestData = { url };
+
+      if (slug) {
+        requestData.slug = slug;
+      }
+
+      fetch('https://kv-url-shortener.deno.dev', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.ok) {
+          const shortenedUrl = `https://kv-url-shortener.deno.dev/${slug || data.versionstamp}`;
+          document.getElementById('shortenedUrl').innerHTML = `Shortened URL: <a href="${shortenedUrl}" target="_blank">${shortenedUrl}</a>`;
+        } else {
+          document.getElementById('shortenedUrl').innerText = 'Error: Unable to shorten URL';
+        }
+      })
+      .catch(error => {
+        console.error('Error:', error);
+        document.getElementById('shortenedUrl').innerText = 'Error: Unable to shorten URL';
+      });
+    });
+  </script>
+</body>
+</html>
+
+
+
+
+
+
